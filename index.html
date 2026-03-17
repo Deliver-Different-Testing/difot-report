@@ -63,6 +63,7 @@
 <div class="hdr"><div><h1>📊 DIFOT & Rerate Impact Report</h1><div class="sub">Urgent Couriers</div></div></div>
 <div class="month-bar"><label>Month:</label><div id="monthBtns"></div></div>
 <div class="trend-bar" id="trendBar"></div>
+<div class="trend-bar" id="volBar" style="height:60px;padding-top:0;border-top:1px solid var(--border);margin:0 32px"></div>
 
 <div class="summary" id="ds"></div>
 <div class="section">DIFOT Performance</div>
@@ -114,10 +115,11 @@ function renderTrend(){
     const d=ALL.months[m];
     const t=d.bySpeed.reduce((s,r)=>s+r.totalJobs,0);
     const ot=d.bySpeed.reduce((s,r)=>s+r.onTimeJobs,0);
-    return{month:m,pct:t?ot/t*100:0,impact:d.rerate.estimatedImpact};
+    return{month:m,pct:t?ot/t*100:0,impact:d.rerate.estimatedImpact,totalJobs:t};
   });
   const maxImp=Math.max(...bars.map(b=>b.impact));
-  $('trendBar').innerHTML=bars.map(b=>{
+  const maxJobs=Math.max(...bars.map(b=>b.totalJobs));
+  $('trendBar').innerHTML='<div style="font-size:10px;color:var(--gray);writing-mode:vertical-rl;transform:rotate(180deg);margin-right:4px">DIFOT %</div>'+bars.map(b=>{
     const[y,mo]=b.month.split('-');
     const h=maxImp?Math.max(8,b.impact/maxImp*50):8;
     const col=b.pct>=80?'var(--green)':b.pct>=60?'var(--amber)':'var(--red)';
@@ -126,6 +128,15 @@ function renderTrend(){
       <div class="val" style="color:${col}">${b.pct.toFixed(0)}%</div>
       <div class="bar" style="height:${h}px;background:${col};${sel}"></div>
       <div class="lbl">${mn[+mo-1]}</div>
+    </div>`;
+  }).join('');
+  $('volBar').innerHTML='<div style="font-size:10px;color:var(--gray);writing-mode:vertical-rl;transform:rotate(180deg);margin-right:4px">Jobs</div>'+bars.map(b=>{
+    const[y,mo]=b.month.split('-');
+    const h=maxJobs?Math.max(6,b.totalJobs/maxJobs*40):6;
+    const sel=b.month===curMonth?'border:2px solid var(--blue);':'';
+    return`<div class="trend-col" onclick="setMonth('${b.month}')" style="cursor:pointer">
+      <div class="val" style="color:var(--gray);font-size:9px">${(b.totalJobs/1000).toFixed(1)}k</div>
+      <div class="bar" style="height:${h}px;background:#94a3b8;${sel}border-radius:3px 3px 0 0"></div>
     </div>`;
   }).join('');
 }
