@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily True DIFOT — Pre-Rerate Period</title>
+<style>
+:root{--blue:#1e40af;--red:#dc2626;--green:#16a34a;--amber:#d97706;--gray:#6b7280;--bg:#f8fafc}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:#1e293b;font-size:13px}
+.hdr{background:var(--blue);color:white;padding:20px 32px}
+.hdr h1{font-size:20px;font-weight:600}
+.hdr .sub{font-size:13px;opacity:.85;margin-top:2px}
+.month-bar{background:#1e3a8a;padding:10px 32px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.month-bar label{color:rgba(255,255,255,.7);font-size:12px;font-weight:600;margin-right:8px}
+.mbtn{padding:6px 14px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.8);font-size:12px;cursor:pointer;border-radius:4px;font-weight:500}
+.mbtn:hover{background:rgba(255,255,255,.1)}
+.mbtn.on{background:white;color:var(--blue);font-weight:700}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:20px 32px}
+.kpi{background:white;border-radius:10px;padding:14px;border:1px solid #e2e8f0;text-align:center}
+.kpi .l{font-size:10px;text-transform:uppercase;color:var(--gray);font-weight:600;letter-spacing:.5px}
+.kpi .v{font-size:22px;font-weight:700;margin:3px 0}
+.kpi .v.red{color:var(--red)}.kpi .v.green{color:var(--green)}.kpi .v.amber{color:var(--amber)}.kpi .v.blue{color:var(--blue)}
+.kpi .d{font-size:10px;color:var(--gray)}
+.chart-wrap{padding:16px 32px}
+.chart-box{background:white;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:16px}
+.chart-title{font-size:14px;font-weight:700;color:#334155;margin-bottom:4px}
+.chart-sub{font-size:11px;color:var(--gray);margin-bottom:12px}
+canvas{width:100%;height:300px}
+.legend{display:flex;gap:16px;margin-top:8px;font-size:11px;flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:4px}
+.legend .dot{width:12px;height:12px;border-radius:2px;display:inline-block}
+.tbl-wrap{padding:0 32px 20px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:white;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0}
+th{background:#f1f5f9;text-align:right;padding:6px 8px;font-size:10px;text-transform:uppercase;color:var(--gray);font-weight:600;border-bottom:2px solid #e2e8f0;cursor:pointer;white-space:nowrap}
+th:first-child,th:nth-child(2){text-align:left}
+td{padding:5px 8px;font-size:12px;border-bottom:1px solid #f1f5f9;text-align:right;font-family:'SF Mono',monospace;font-size:11px}
+td:first-child,td:nth-child(2){text-align:left;font-family:-apple-system,sans-serif}
+tr:hover td{background:#f8fafc}
+.bar{display:flex;height:14px;border-radius:3px;overflow:hidden;min-width:80px}
+.bar .g{background:#22c55e}.bar .r{background:#ef4444}.bar .y{background:#f59e0b}
+.p{font-weight:700}.p.hi{color:var(--green)}.p.mid{color:var(--amber)}.p.lo{color:var(--red)}
+.gap-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:#fef2f2;color:var(--red)}
+.tabs{display:flex;margin:12px 32px 0}
+.tabs button{padding:6px 14px;border:1px solid #e2e8f0;background:white;font-size:12px;cursor:pointer;font-weight:500}
+.tabs button:first-child{border-radius:6px 0 0 6px}.tabs button:last-child{border-radius:0 6px 6px 0}
+.tabs button.on{background:var(--blue);color:white;border-color:var(--blue)}
+.note{padding:12px 32px;font-size:11px;color:var(--gray);border-top:1px solid #e2e8f0;margin-top:12px;line-height:1.5}
+.note strong{color:#475569}
+.alert{background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:14px 18px;margin:16px 32px;font-size:12px;color:var(--amber)}
+.alert strong{color:#78350f}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>📊 Daily True DIFOT — Before Rerate Stopped (7 Nov 2025)</h1>
+  <div class="sub">Measured against original customer-booked speed, not auto-rerated speed</div>
+</div>
+
+<div class="month-bar">
+  <label>Month:</label>
+  <div id="monthBtns"></div>
+</div>
+
+<div class="alert">
+  <strong>⚠️ What this shows:</strong> The auto-rerate system was masking real delivery performance. "Reported DIFOT" counted jobs against the downgraded speed; "True DIFOT" counts against what the customer actually booked. The gap = performance hidden by re-rating.
+</div>
+
+<div class="kpi-row" id="kpis"></div>
+
+<div class="chart-wrap">
+  <div class="chart-box">
+    <div class="chart-title">Daily DIFOT — True vs Reported</div>
+    <div class="chart-sub">Each point = one day. True DIFOT (red) vs Reported DIFOT (blue)</div>
+    <canvas id="mainChart"></canvas>
+    <div class="legend">
+      <span><span class="dot" style="background:#3b82f6"></span> Reported DIFOT (rerated speed)</span>
+      <span><span class="dot" style="background:#ef4444"></span> True DIFOT (original booked speed)</span>
+      <span><span class="dot" style="background:#f59e0b"></span> Gap hidden by rerate</span>
+    </div>
+  </div>
+</div>
+
+<div class="tabs" id="viewTabs">
+  <button class="on" data-v="day">Daily</button>
+  <button data-v="week">Weekly</button>
+</div>
+
+<div class="tbl-wrap" style="margin-top:12px">
+  <table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+</div>
+
+<div class="note">
+  <strong>Methodology:</strong> Courier speed types only (1hr, 30min, 15min, 3hr, 45min, 75min, 90min, 2hr). Parent jobs, Void=No, JobDone=Yes, non-internal clients.<br>
+  <strong>True DIFOT:</strong> Completed within AcceptedJobTypeID (original booked) time limit.<br>
+  <strong>Reported DIFOT:</strong> Completed within ucjbSpeed (current, possibly rerated) time limit.<br>
+  <strong>Rerate stopped:</strong> 7 November 2025.
+</div>
+
+<script>
+const DATA = [{"date": "2025-04-01", "total": 564, "onTimeOrig": 476, "onTimeCurr": 534, "rerated": 61, "trueDifot": 84.4, "reportedDifot": 94.7}, {"date": "2025-04-02", "total": 618, "onTimeOrig": 496, "onTimeCurr": 571, "rerated": 77, "trueDifot": 80.3, "reportedDifot": 92.4}, {"date": "2025-04-03", "total": 634, "onTimeOrig": 467, "onTimeCurr": 579, "rerated": 114, "trueDifot": 73.7, "reportedDifot": 91.3}, {"date": "2025-04-04", "total": 652, "onTimeOrig": 473, "onTimeCurr": 591, "rerated": 122, "trueDifot": 72.5, "reportedDifot": 90.6}, {"date": "2025-04-05", "total": 24, "onTimeOrig": 9, "onTimeCurr": 15, "rerated": 6, "trueDifot": 37.5, "reportedDifot": 62.5}, {"date": "2025-04-06", "total": 9, "onTimeOrig": 6, "onTimeCurr": 6, "rerated": 0, "trueDifot": 66.7, "reportedDifot": 66.7}, {"date": "2025-04-07", "total": 629, "onTimeOrig": 510, "onTimeCurr": 588, "rerated": 80, "trueDifot": 81.1, "reportedDifot": 93.5}, {"date": "2025-04-08", "total": 591, "onTimeOrig": 505, "onTimeCurr": 559, "rerated": 57, "trueDifot": 85.4, "reportedDifot": 94.6}, {"date": "2025-04-09", "total": 613, "onTimeOrig": 500, "onTimeCurr": 572, "rerated": 74, "trueDifot": 81.6, "reportedDifot": 93.3}, {"date": "2025-04-10", "total": 587, "onTimeOrig": 471, "onTimeCurr": 551, "rerated": 82, "trueDifot": 80.2, "reportedDifot": 93.9}, {"date": "2025-04-11", "total": 630, "onTimeOrig": 519, "onTimeCurr": 575, "rerated": 57, "trueDifot": 82.4, "reportedDifot": 91.3}, {"date": "2025-04-12", "total": 24, "onTimeOrig": 17, "onTimeCurr": 22, "rerated": 6, "trueDifot": 70.8, "reportedDifot": 91.7}, {"date": "2025-04-13", "total": 9, "onTimeOrig": 7, "onTimeCurr": 7, "rerated": 0, "trueDifot": 77.8, "reportedDifot": 77.8}, {"date": "2025-04-14", "total": 556, "onTimeOrig": 505, "onTimeCurr": 538, "rerated": 33, "trueDifot": 90.8, "reportedDifot": 96.8}, {"date": "2025-04-15", "total": 594, "onTimeOrig": 501, "onTimeCurr": 560, "rerated": 60, "trueDifot": 84.3, "reportedDifot": 94.3}, {"date": "2025-04-16", "total": 611, "onTimeOrig": 451, "onTimeCurr": 566, "rerated": 116, "trueDifot": 73.8, "reportedDifot": 92.6}, {"date": "2025-04-17", "total": 623, "onTimeOrig": 453, "onTimeCurr": 557, "rerated": 109, "trueDifot": 72.7, "reportedDifot": 89.4}, {"date": "2025-04-18", "total": 7, "onTimeOrig": 6, "onTimeCurr": 6, "rerated": 0, "trueDifot": 85.7, "reportedDifot": 85.7}, {"date": "2025-04-19", "total": 22, "onTimeOrig": 16, "onTimeCurr": 19, "rerated": 3, "trueDifot": 72.7, "reportedDifot": 86.4}, {"date": "2025-04-20", "total": 3, "onTimeOrig": 3, "onTimeCurr": 3, "rerated": 0, "trueDifot": 100.0, "reportedDifot": 100.0}, {"date": "2025-04-21", "total": 9, "onTimeOrig": 6, "onTimeCurr": 6, "rerated": 0, "trueDifot": 66.7, "reportedDifot": 66.7}, {"date": "2025-04-22", "total": 629, "onTimeOrig": 513, "onTimeCurr": 584, "rerated": 72, "trueDifot": 81.6, "reportedDifot": 92.8}, {"date": "2025-04-23", "total": 575, "onTimeOrig": 475, "onTimeCurr": 544, "rerated": 71, "trueDifot": 82.6, "reportedDifot": 94.6}, {"date": "2025-04-24", "total": 648, "onTimeOrig": 466, "onTimeCurr": 593, "rerated": 128, "trueDifot": 71.9, "reportedDifot": 91.5}, {"date": "2025-04-25", "total": 16, "onTimeOrig": 9, "onTimeCurr": 10, "rerated": 2, "trueDifot": 56.2, "reportedDifot": 62.5}, {"date": "2025-04-26", "total": 30, "onTimeOrig": 18, "onTimeCurr": 25, "rerated": 7, "trueDifot": 60.0, "reportedDifot": 83.3}, {"date": "2025-04-27", "total": 17, "onTimeOrig": 10, "onTimeCurr": 12, "rerated": 2, "trueDifot": 58.8, "reportedDifot": 70.6}, {"date": "2025-04-28", "total": 573, "onTimeOrig": 503, "onTimeCurr": 537, "rerated": 35, "trueDifot": 87.8, "reportedDifot": 93.7}, {"date": "2025-04-29", "total": 642, "onTimeOrig": 524, "onTimeCurr": 602, "rerated": 79, "trueDifot": 81.6, "reportedDifot": 93.8}, {"date": "2025-04-30", "total": 655, "onTimeOrig": 542, "onTimeCurr": 615, "rerated": 74, "trueDifot": 82.7, "reportedDifot": 93.9}, {"date": "2025-05-01", "total": 610, "onTimeOrig": 488, "onTimeCurr": 560, "rerated": 74, "trueDifot": 80.0, "reportedDifot": 91.8}, {"date": "2025-05-02", "total": 675, "onTimeOrig": 507, "onTimeCurr": 614, "rerated": 111, "trueDifot": 75.1, "reportedDifot": 91.0}, {"date": "2025-05-03", "total": 11, "onTimeOrig": 9, "onTimeCurr": 9, "rerated": 0, "trueDifot": 81.8, "reportedDifot": 81.8}, {"date": "2025-05-04", "total": 11, "onTimeOrig": 5, "onTimeCurr": 5, "rerated": 0, "trueDifot": 45.5, "reportedDifot": 45.5}, {"date": "2025-05-05", "total": 574, "onTimeOrig": 473, "onTimeCurr": 534, "rerated": 62, "trueDifot": 82.4, "reportedDifot": 93.0}, {"date": "2025-05-06", "total": 582, "onTimeOrig": 472, "onTimeCurr": 541, "rerated": 71, "trueDifot": 81.1, "reportedDifot": 93.0}, {"date": "2025-05-07", "total": 567, "onTimeOrig": 486, "onTimeCurr": 531, "rerated": 46, "trueDifot": 85.7, "reportedDifot": 93.7}, {"date": "2025-05-08", "total": 589, "onTimeOrig": 470, "onTimeCurr": 539, "rerated": 74, "trueDifot": 79.8, "reportedDifot": 91.5}, {"date": "2025-05-09", "total": 645, "onTimeOrig": 470, "onTimeCurr": 588, "rerated": 120, "trueDifot": 72.9, "reportedDifot": 91.2}, {"date": "2025-05-10", "total": 25, "onTimeOrig": 16, "onTimeCurr": 22, "rerated": 6, "trueDifot": 64.0, "reportedDifot": 88.0}, {"date": "2025-05-11", "total": 13, "onTimeOrig": 8, "onTimeCurr": 11, "rerated": 3, "trueDifot": 61.5, "reportedDifot": 84.6}, {"date": "2025-05-12", "total": 618, "onTimeOrig": 535, "onTimeCurr": 584, "rerated": 51, "trueDifot": 86.6, "reportedDifot": 94.5}, {"date": "2025-05-13", "total": 580, "onTimeOrig": 495, "onTimeCurr": 548, "rerated": 56, "trueDifot": 85.3, "reportedDifot": 94.5}, {"date": "2025-05-14", "total": 563, "onTimeOrig": 458, "onTimeCurr": 525, "rerated": 69, "trueDifot": 81.3, "reportedDifot": 93.3}, {"date": "2025-05-15", "total": 639, "onTimeOrig": 531, "onTimeCurr": 608, "rerated": 82, "trueDifot": 83.1, "reportedDifot": 95.1}, {"date": "2025-05-16", "total": 580, "onTimeOrig": 451, "onTimeCurr": 531, "rerated": 82, "trueDifot": 77.8, "reportedDifot": 91.6}, {"date": "2025-05-17", "total": 27, "onTimeOrig": 16, "onTimeCurr": 18, "rerated": 2, "trueDifot": 59.3, "reportedDifot": 66.7}, {"date": "2025-05-18", "total": 16, "onTimeOrig": 8, "onTimeCurr": 8, "rerated": 0, "trueDifot": 50.0, "reportedDifot": 50.0}, {"date": "2025-05-19", "total": 554, "onTimeOrig": 485, "onTimeCurr": 514, "rerated": 30, "trueDifot": 87.5, "reportedDifot": 92.8}, {"date": "2025-05-20", "total": 614, "onTimeOrig": 517, "onTimeCurr": 580, "rerated": 64, "trueDifot": 84.2, "reportedDifot": 94.5}, {"date": "2025-05-21", "total": 554, "onTimeOrig": 484, "onTimeCurr": 529, "rerated": 47, "trueDifot": 87.4, "reportedDifot": 95.5}, {"date": "2025-05-22", "total": 564, "onTimeOrig": 470, "onTimeCurr": 531, "rerated": 63, "trueDifot": 83.3, "reportedDifot": 94.1}, {"date": "2025-05-23", "total": 642, "onTimeOrig": 526, "onTimeCurr": 599, "rerated": 74, "trueDifot": 81.9, "reportedDifot": 93.3}, {"date": "2025-05-24", "total": 16, "onTimeOrig": 11, "onTimeCurr": 14, "rerated": 4, "trueDifot": 68.8, "reportedDifot": 87.5}, {"date": "2025-05-25", "total": 9, "onTimeOrig": 6, "onTimeCurr": 6, "rerated": 0, "trueDifot": 66.7, "reportedDifot": 66.7}, {"date": "2025-05-26", "total": 581, "onTimeOrig": 475, "onTimeCurr": 530, "rerated": 57, "trueDifot": 81.8, "reportedDifot": 91.2}, {"date": "2025-05-27", "total": 558, "onTimeOrig": 522, "onTimeCurr": 541, "rerated": 23, "trueDifot": 93.5, "reportedDifot": 97.0}, {"date": "2025-05-28", "total": 584, "onTimeOrig": 477, "onTimeCurr": 550, "rerated": 76, "trueDifot": 81.7, "reportedDifot": 94.2}, {"date": "2025-05-29", "total": 582, "onTimeOrig": 493, "onTimeCurr": 549, "rerated": 57, "trueDifot": 84.7, "reportedDifot": 94.3}, {"date": "2025-05-30", "total": 612, "onTimeOrig": 460, "onTimeCurr": 568, "rerated": 111, "trueDifot": 75.2, "reportedDifot": 92.8}, {"date": "2025-05-31", "total": 6, "onTimeOrig": 0, "onTimeCurr": 0, "rerated": 0, "trueDifot": 0.0, "reportedDifot": 0.0}, {"date": "2025-06-01", "total": 26, "onTimeOrig": 11, "onTimeCurr": 13, "rerated": 2, "trueDifot": 42.3, "reportedDifot": 50.0}, {"date": "2025-06-02", "total": 12, "onTimeOrig": 7, "onTimeCurr": 10, "rerated": 3, "trueDifot": 58.3, "reportedDifot": 83.3}, {"date": "2025-06-03", "total": 572, "onTimeOrig": 470, "onTimeCurr": 522, "rerated": 53, "trueDifot": 82.2, "reportedDifot": 91.3}, {"date": "2025-06-04", "total": 635, "onTimeOrig": 478, "onTimeCurr": 573, "rerated": 100, "trueDifot": 75.3, "reportedDifot": 90.2}, {"date": "2025-06-05", "total": 550, "onTimeOrig": 463, "onTimeCurr": 517, "rerated": 55, "trueDifot": 84.2, "reportedDifot": 94.0}, {"date": "2025-06-06", "total": 620, "onTimeOrig": 475, "onTimeCurr": 575, "rerated": 103, "trueDifot": 76.6, "reportedDifot": 92.7}, {"date": "2025-06-07", "total": 16, "onTimeOrig": 14, "onTimeCurr": 14, "rerated": 0, "trueDifot": 87.5, "reportedDifot": 87.5}, {"date": "2025-06-08", "total": 11, "onTimeOrig": 5, "onTimeCurr": 6, "rerated": 1, "trueDifot": 45.5, "reportedDifot": 54.5}, {"date": "2025-06-09", "total": 586, "onTimeOrig": 509, "onTimeCurr": 545, "rerated": 38, "trueDifot": 86.9, "reportedDifot": 93.0}, {"date": "2025-06-10", "total": 583, "onTimeOrig": 494, "onTimeCurr": 557, "rerated": 64, "trueDifot": 84.7, "reportedDifot": 95.5}, {"date": "2025-06-11", "total": 508, "onTimeOrig": 453, "onTimeCurr": 481, "rerated": 29, "trueDifot": 89.2, "reportedDifot": 94.7}, {"date": "2025-06-12", "total": 589, "onTimeOrig": 455, "onTimeCurr": 545, "rerated": 92, "trueDifot": 77.2, "reportedDifot": 92.5}, {"date": "2025-06-13", "total": 567, "onTimeOrig": 490, "onTimeCurr": 539, "rerated": 50, "trueDifot": 86.4, "reportedDifot": 95.1}, {"date": "2025-06-14", "total": 40, "onTimeOrig": 22, "onTimeCurr": 29, "rerated": 7, "trueDifot": 55.0, "reportedDifot": 72.5}, {"date": "2025-06-15", "total": 10, "onTimeOrig": 7, "onTimeCurr": 7, "rerated": 0, "trueDifot": 70.0, "reportedDifot": 70.0}, {"date": "2025-06-16", "total": 559, "onTimeOrig": 483, "onTimeCurr": 527, "rerated": 46, "trueDifot": 86.4, "reportedDifot": 94.3}, {"date": "2025-06-17", "total": 573, "onTimeOrig": 500, "onTimeCurr": 535, "rerated": 36, "trueDifot": 87.3, "reportedDifot": 93.4}, {"date": "2025-06-18", "total": 574, "onTimeOrig": 453, "onTimeCurr": 528, "rerated": 76, "trueDifot": 78.9, "reportedDifot": 92.0}, {"date": "2025-06-19", "total": 648, "onTimeOrig": 480, "onTimeCurr": 585, "rerated": 107, "trueDifot": 74.1, "reportedDifot": 90.3}, {"date": "2025-06-20", "total": 14, "onTimeOrig": 8, "onTimeCurr": 8, "rerated": 0, "trueDifot": 57.1, "reportedDifot": 57.1}, {"date": "2025-06-21", "total": 16, "onTimeOrig": 10, "onTimeCurr": 11, "rerated": 1, "trueDifot": 62.5, "reportedDifot": 68.8}, {"date": "2025-06-22", "total": 13, "onTimeOrig": 6, "onTimeCurr": 7, "rerated": 1, "trueDifot": 46.2, "reportedDifot": 53.8}, {"date": "2025-06-23", "total": 575, "onTimeOrig": 501, "onTimeCurr": 538, "rerated": 39, "trueDifot": 87.1, "reportedDifot": 93.6}, {"date": "2025-06-24", "total": 607, "onTimeOrig": 509, "onTimeCurr": 566, "rerated": 59, "trueDifot": 83.9, "reportedDifot": 93.2}, {"date": "2025-06-25", "total": 579, "onTimeOrig": 489, "onTimeCurr": 543, "rerated": 59, "trueDifot": 84.5, "reportedDifot": 93.8}, {"date": "2025-06-26", "total": 628, "onTimeOrig": 525, "onTimeCurr": 590, "rerated": 67, "trueDifot": 83.6, "reportedDifot": 93.9}, {"date": "2025-06-27", "total": 666, "onTimeOrig": 509, "onTimeCurr": 619, "rerated": 112, "trueDifot": 76.4, "reportedDifot": 92.9}, {"date": "2025-06-28", "total": 34, "onTimeOrig": 23, "onTimeCurr": 26, "rerated": 3, "trueDifot": 67.6, "reportedDifot": 76.5}, {"date": "2025-06-29", "total": 9, "onTimeOrig": 6, "onTimeCurr": 7, "rerated": 1, "trueDifot": 66.7, "reportedDifot": 77.8}, {"date": "2025-06-30", "total": 519, "onTimeOrig": 465, "onTimeCurr": 497, "rerated": 34, "trueDifot": 89.6, "reportedDifot": 95.8}, {"date": "2025-07-01", "total": 536, "onTimeOrig": 479, "onTimeCurr": 507, "rerated": 31, "trueDifot": 89.4, "reportedDifot": 94.6}, {"date": "2025-07-02", "total": 569, "onTimeOrig": 476, "onTimeCurr": 544, "rerated": 71, "trueDifot": 83.7, "reportedDifot": 95.6}, {"date": "2025-07-03", "total": 532, "onTimeOrig": 458, "onTimeCurr": 507, "rerated": 51, "trueDifot": 86.1, "reportedDifot": 95.3}, {"date": "2025-07-04", "total": 564, "onTimeOrig": 476, "onTimeCurr": 531, "rerated": 58, "trueDifot": 84.4, "reportedDifot": 94.1}, {"date": "2025-07-05", "total": 38, "onTimeOrig": 32, "onTimeCurr": 36, "rerated": 4, "trueDifot": 84.2, "reportedDifot": 94.7}, {"date": "2025-07-06", "total": 12, "onTimeOrig": 5, "onTimeCurr": 7, "rerated": 2, "trueDifot": 41.7, "reportedDifot": 58.3}, {"date": "2025-07-07", "total": 468, "onTimeOrig": 428, "onTimeCurr": 452, "rerated": 25, "trueDifot": 91.5, "reportedDifot": 96.6}, {"date": "2025-07-08", "total": 498, "onTimeOrig": 445, "onTimeCurr": 479, "rerated": 34, "trueDifot": 89.4, "reportedDifot": 96.2}, {"date": "2025-07-09", "total": 577, "onTimeOrig": 475, "onTimeCurr": 540, "rerated": 67, "trueDifot": 82.3, "reportedDifot": 93.6}, {"date": "2025-07-10", "total": 455, "onTimeOrig": 397, "onTimeCurr": 438, "rerated": 43, "trueDifot": 87.3, "reportedDifot": 96.3}, {"date": "2025-07-11", "total": 535, "onTimeOrig": 449, "onTimeCurr": 502, "rerated": 57, "trueDifot": 83.9, "reportedDifot": 93.8}, {"date": "2025-07-12", "total": 14, "onTimeOrig": 13, "onTimeCurr": 14, "rerated": 1, "trueDifot": 92.9, "reportedDifot": 100.0}, {"date": "2025-07-13", "total": 8, "onTimeOrig": 3, "onTimeCurr": 5, "rerated": 2, "trueDifot": 37.5, "reportedDifot": 62.5}, {"date": "2025-07-14", "total": 505, "onTimeOrig": 468, "onTimeCurr": 481, "rerated": 14, "trueDifot": 92.7, "reportedDifot": 95.2}, {"date": "2025-07-15", "total": 548, "onTimeOrig": 494, "onTimeCurr": 531, "rerated": 40, "trueDifot": 90.1, "reportedDifot": 96.9}, {"date": "2025-07-16", "total": 526, "onTimeOrig": 464, "onTimeCurr": 496, "rerated": 34, "trueDifot": 88.2, "reportedDifot": 94.3}, {"date": "2025-07-17", "total": 540, "onTimeOrig": 438, "onTimeCurr": 510, "rerated": 73, "trueDifot": 81.1, "reportedDifot": 94.4}, {"date": "2025-07-18", "total": 565, "onTimeOrig": 481, "onTimeCurr": 529, "rerated": 50, "trueDifot": 85.1, "reportedDifot": 93.6}, {"date": "2025-07-19", "total": 19, "onTimeOrig": 14, "onTimeCurr": 18, "rerated": 4, "trueDifot": 73.7, "reportedDifot": 94.7}, {"date": "2025-07-20", "total": 9, "onTimeOrig": 5, "onTimeCurr": 5, "rerated": 0, "trueDifot": 55.6, "reportedDifot": 55.6}, {"date": "2025-07-21", "total": 509, "onTimeOrig": 444, "onTimeCurr": 475, "rerated": 32, "trueDifot": 87.2, "reportedDifot": 93.3}, {"date": "2025-07-22", "total": 534, "onTimeOrig": 408, "onTimeCurr": 487, "rerated": 81, "trueDifot": 76.4, "reportedDifot": 91.2}, {"date": "2025-07-23", "total": 551, "onTimeOrig": 469, "onTimeCurr": 513, "rerated": 50, "trueDifot": 85.1, "reportedDifot": 93.1}, {"date": "2025-07-24", "total": 559, "onTimeOrig": 477, "onTimeCurr": 533, "rerated": 58, "trueDifot": 85.3, "reportedDifot": 95.3}, {"date": "2025-07-25", "total": 574, "onTimeOrig": 486, "onTimeCurr": 542, "rerated": 57, "trueDifot": 84.7, "reportedDifot": 94.4}, {"date": "2025-07-26", "total": 29, "onTimeOrig": 16, "onTimeCurr": 21, "rerated": 5, "trueDifot": 55.2, "reportedDifot": 72.4}, {"date": "2025-07-27", "total": 11, "onTimeOrig": 6, "onTimeCurr": 7, "rerated": 1, "trueDifot": 54.5, "reportedDifot": 63.6}, {"date": "2025-07-28", "total": 573, "onTimeOrig": 513, "onTimeCurr": 546, "rerated": 36, "trueDifot": 89.5, "reportedDifot": 95.3}, {"date": "2025-07-29", "total": 515, "onTimeOrig": 450, "onTimeCurr": 492, "rerated": 43, "trueDifot": 87.4, "reportedDifot": 95.5}, {"date": "2025-07-30", "total": 540, "onTimeOrig": 452, "onTimeCurr": 517, "rerated": 66, "trueDifot": 83.7, "reportedDifot": 95.7}, {"date": "2025-07-31", "total": 519, "onTimeOrig": 453, "onTimeCurr": 499, "rerated": 47, "trueDifot": 87.3, "reportedDifot": 96.1}, {"date": "2025-08-01", "total": 557, "onTimeOrig": 490, "onTimeCurr": 525, "rerated": 38, "trueDifot": 88.0, "reportedDifot": 94.3}, {"date": "2025-08-02", "total": 26, "onTimeOrig": 22, "onTimeCurr": 22, "rerated": 0, "trueDifot": 84.6, "reportedDifot": 84.6}, {"date": "2025-08-03", "total": 7, "onTimeOrig": 5, "onTimeCurr": 5, "rerated": 0, "trueDifot": 71.4, "reportedDifot": 71.4}, {"date": "2025-08-04", "total": 550, "onTimeOrig": 492, "onTimeCurr": 522, "rerated": 31, "trueDifot": 89.5, "reportedDifot": 94.9}, {"date": "2025-08-05", "total": 531, "onTimeOrig": 458, "onTimeCurr": 499, "rerated": 42, "trueDifot": 86.3, "reportedDifot": 94.0}, {"date": "2025-08-06", "total": 514, "onTimeOrig": 457, "onTimeCurr": 486, "rerated": 32, "trueDifot": 88.9, "reportedDifot": 94.6}, {"date": "2025-08-07", "total": 464, "onTimeOrig": 413, "onTimeCurr": 444, "rerated": 32, "trueDifot": 89.0, "reportedDifot": 95.7}, {"date": "2025-08-08", "total": 538, "onTimeOrig": 471, "onTimeCurr": 513, "rerated": 43, "trueDifot": 87.5, "reportedDifot": 95.4}, {"date": "2025-08-09", "total": 13, "onTimeOrig": 9, "onTimeCurr": 12, "rerated": 3, "trueDifot": 69.2, "reportedDifot": 92.3}, {"date": "2025-08-10", "total": 14, "onTimeOrig": 9, "onTimeCurr": 9, "rerated": 0, "trueDifot": 64.3, "reportedDifot": 64.3}, {"date": "2025-08-11", "total": 537, "onTimeOrig": 475, "onTimeCurr": 504, "rerated": 30, "trueDifot": 88.5, "reportedDifot": 93.9}, {"date": "2025-08-12", "total": 539, "onTimeOrig": 442, "onTimeCurr": 506, "rerated": 65, "trueDifot": 82.0, "reportedDifot": 93.9}, {"date": "2025-08-13", "total": 520, "onTimeOrig": 474, "onTimeCurr": 494, "rerated": 22, "trueDifot": 91.2, "reportedDifot": 95.0}, {"date": "2025-08-14", "total": 487, "onTimeOrig": 404, "onTimeCurr": 460, "rerated": 59, "trueDifot": 83.0, "reportedDifot": 94.5}, {"date": "2025-08-15", "total": 497, "onTimeOrig": 430, "onTimeCurr": 467, "rerated": 39, "trueDifot": 86.5, "reportedDifot": 94.0}, {"date": "2025-08-16", "total": 22, "onTimeOrig": 15, "onTimeCurr": 17, "rerated": 2, "trueDifot": 68.2, "reportedDifot": 77.3}, {"date": "2025-08-17", "total": 17, "onTimeOrig": 10, "onTimeCurr": 11, "rerated": 1, "trueDifot": 58.8, "reportedDifot": 64.7}, {"date": "2025-08-18", "total": 514, "onTimeOrig": 439, "onTimeCurr": 484, "rerated": 46, "trueDifot": 85.4, "reportedDifot": 94.2}, {"date": "2025-08-19", "total": 526, "onTimeOrig": 480, "onTimeCurr": 503, "rerated": 25, "trueDifot": 91.3, "reportedDifot": 95.6}, {"date": "2025-08-20", "total": 565, "onTimeOrig": 489, "onTimeCurr": 525, "rerated": 38, "trueDifot": 86.5, "reportedDifot": 92.9}, {"date": "2025-08-21", "total": 505, "onTimeOrig": 436, "onTimeCurr": 483, "rerated": 48, "trueDifot": 86.3, "reportedDifot": 95.6}, {"date": "2025-08-22", "total": 537, "onTimeOrig": 443, "onTimeCurr": 496, "rerated": 57, "trueDifot": 82.5, "reportedDifot": 92.4}, {"date": "2025-08-23", "total": 17, "onTimeOrig": 11, "onTimeCurr": 14, "rerated": 3, "trueDifot": 64.7, "reportedDifot": 82.4}, {"date": "2025-08-24", "total": 10, "onTimeOrig": 7, "onTimeCurr": 8, "rerated": 1, "trueDifot": 70.0, "reportedDifot": 80.0}, {"date": "2025-08-25", "total": 582, "onTimeOrig": 509, "onTimeCurr": 548, "rerated": 40, "trueDifot": 87.5, "reportedDifot": 94.2}, {"date": "2025-08-26", "total": 549, "onTimeOrig": 484, "onTimeCurr": 522, "rerated": 40, "trueDifot": 88.2, "reportedDifot": 95.1}, {"date": "2025-08-27", "total": 560, "onTimeOrig": 463, "onTimeCurr": 519, "rerated": 57, "trueDifot": 82.7, "reportedDifot": 92.7}, {"date": "2025-08-28", "total": 528, "onTimeOrig": 449, "onTimeCurr": 510, "rerated": 64, "trueDifot": 85.0, "reportedDifot": 96.6}, {"date": "2025-08-29", "total": 556, "onTimeOrig": 429, "onTimeCurr": 518, "rerated": 90, "trueDifot": 77.2, "reportedDifot": 93.2}, {"date": "2025-08-30", "total": 15, "onTimeOrig": 11, "onTimeCurr": 12, "rerated": 1, "trueDifot": 73.3, "reportedDifot": 80.0}, {"date": "2025-08-31", "total": 10, "onTimeOrig": 6, "onTimeCurr": 7, "rerated": 1, "trueDifot": 60.0, "reportedDifot": 70.0}, {"date": "2025-09-01", "total": 572, "onTimeOrig": 487, "onTimeCurr": 541, "rerated": 56, "trueDifot": 85.1, "reportedDifot": 94.6}, {"date": "2025-09-02", "total": 532, "onTimeOrig": 463, "onTimeCurr": 510, "rerated": 48, "trueDifot": 87.0, "reportedDifot": 95.9}, {"date": "2025-09-03", "total": 519, "onTimeOrig": 457, "onTimeCurr": 497, "rerated": 43, "trueDifot": 88.1, "reportedDifot": 95.8}, {"date": "2025-09-04", "total": 486, "onTimeOrig": 414, "onTimeCurr": 465, "rerated": 53, "trueDifot": 85.2, "reportedDifot": 95.7}, {"date": "2025-09-05", "total": 521, "onTimeOrig": 398, "onTimeCurr": 471, "rerated": 75, "trueDifot": 76.4, "reportedDifot": 90.4}, {"date": "2025-09-06", "total": 17, "onTimeOrig": 13, "onTimeCurr": 13, "rerated": 0, "trueDifot": 76.5, "reportedDifot": 76.5}, {"date": "2025-09-07", "total": 12, "onTimeOrig": 7, "onTimeCurr": 8, "rerated": 1, "trueDifot": 58.3, "reportedDifot": 66.7}, {"date": "2025-09-08", "total": 515, "onTimeOrig": 408, "onTimeCurr": 470, "rerated": 63, "trueDifot": 79.2, "reportedDifot": 91.3}, {"date": "2025-09-09", "total": 536, "onTimeOrig": 425, "onTimeCurr": 504, "rerated": 81, "trueDifot": 79.3, "reportedDifot": 94.0}, {"date": "2025-09-10", "total": 526, "onTimeOrig": 427, "onTimeCurr": 488, "rerated": 63, "trueDifot": 81.2, "reportedDifot": 92.8}, {"date": "2025-09-11", "total": 558, "onTimeOrig": 450, "onTimeCurr": 519, "rerated": 72, "trueDifot": 80.6, "reportedDifot": 93.0}, {"date": "2025-09-12", "total": 542, "onTimeOrig": 451, "onTimeCurr": 512, "rerated": 62, "trueDifot": 83.2, "reportedDifot": 94.5}, {"date": "2025-09-13", "total": 16, "onTimeOrig": 13, "onTimeCurr": 14, "rerated": 1, "trueDifot": 81.2, "reportedDifot": 87.5}, {"date": "2025-09-14", "total": 13, "onTimeOrig": 10, "onTimeCurr": 10, "rerated": 0, "trueDifot": 76.9, "reportedDifot": 76.9}, {"date": "2025-09-15", "total": 534, "onTimeOrig": 434, "onTimeCurr": 497, "rerated": 65, "trueDifot": 81.3, "reportedDifot": 93.1}, {"date": "2025-09-16", "total": 512, "onTimeOrig": 438, "onTimeCurr": 487, "rerated": 52, "trueDifot": 85.5, "reportedDifot": 95.1}, {"date": "2025-09-17", "total": 512, "onTimeOrig": 452, "onTimeCurr": 494, "rerated": 44, "trueDifot": 88.3, "reportedDifot": 96.5}, {"date": "2025-09-18", "total": 560, "onTimeOrig": 419, "onTimeCurr": 521, "rerated": 103, "trueDifot": 74.8, "reportedDifot": 93.0}, {"date": "2025-09-19", "total": 584, "onTimeOrig": 448, "onTimeCurr": 540, "rerated": 94, "trueDifot": 76.7, "reportedDifot": 92.5}, {"date": "2025-09-20", "total": 16, "onTimeOrig": 13, "onTimeCurr": 13, "rerated": 0, "trueDifot": 81.2, "reportedDifot": 81.2}, {"date": "2025-09-21", "total": 12, "onTimeOrig": 7, "onTimeCurr": 8, "rerated": 1, "trueDifot": 58.3, "reportedDifot": 66.7}, {"date": "2025-09-22", "total": 507, "onTimeOrig": 446, "onTimeCurr": 479, "rerated": 35, "trueDifot": 88.0, "reportedDifot": 94.5}, {"date": "2025-09-23", "total": 484, "onTimeOrig": 440, "onTimeCurr": 467, "rerated": 29, "trueDifot": 90.9, "reportedDifot": 96.5}, {"date": "2025-09-24", "total": 524, "onTimeOrig": 460, "onTimeCurr": 507, "rerated": 48, "trueDifot": 87.8, "reportedDifot": 96.8}, {"date": "2025-09-25", "total": 560, "onTimeOrig": 467, "onTimeCurr": 532, "rerated": 66, "trueDifot": 83.4, "reportedDifot": 95.0}, {"date": "2025-09-26", "total": 547, "onTimeOrig": 410, "onTimeCurr": 509, "rerated": 101, "trueDifot": 75.0, "reportedDifot": 93.1}, {"date": "2025-09-27", "total": 10, "onTimeOrig": 7, "onTimeCurr": 8, "rerated": 1, "trueDifot": 70.0, "reportedDifot": 80.0}, {"date": "2025-09-28", "total": 11, "onTimeOrig": 7, "onTimeCurr": 7, "rerated": 0, "trueDifot": 63.6, "reportedDifot": 63.6}, {"date": "2025-09-29", "total": 497, "onTimeOrig": 424, "onTimeCurr": 459, "rerated": 36, "trueDifot": 85.3, "reportedDifot": 92.4}, {"date": "2025-09-30", "total": 528, "onTimeOrig": 447, "onTimeCurr": 502, "rerated": 56, "trueDifot": 84.7, "reportedDifot": 95.1}, {"date": "2025-10-01", "total": 541, "onTimeOrig": 450, "onTimeCurr": 506, "rerated": 57, "trueDifot": 83.2, "reportedDifot": 93.5}, {"date": "2025-10-02", "total": 537, "onTimeOrig": 418, "onTimeCurr": 504, "rerated": 87, "trueDifot": 77.8, "reportedDifot": 93.9}, {"date": "2025-10-03", "total": 598, "onTimeOrig": 470, "onTimeCurr": 561, "rerated": 92, "trueDifot": 78.6, "reportedDifot": 93.8}, {"date": "2025-10-04", "total": 12, "onTimeOrig": 10, "onTimeCurr": 10, "rerated": 0, "trueDifot": 83.3, "reportedDifot": 83.3}, {"date": "2025-10-05", "total": 18, "onTimeOrig": 12, "onTimeCurr": 15, "rerated": 3, "trueDifot": 66.7, "reportedDifot": 83.3}, {"date": "2025-10-06", "total": 531, "onTimeOrig": 449, "onTimeCurr": 495, "rerated": 47, "trueDifot": 84.6, "reportedDifot": 93.2}, {"date": "2025-10-07", "total": 500, "onTimeOrig": 432, "onTimeCurr": 478, "rerated": 47, "trueDifot": 86.4, "reportedDifot": 95.6}, {"date": "2025-10-08", "total": 529, "onTimeOrig": 454, "onTimeCurr": 506, "rerated": 54, "trueDifot": 85.8, "reportedDifot": 95.7}, {"date": "2025-10-09", "total": 530, "onTimeOrig": 450, "onTimeCurr": 502, "rerated": 53, "trueDifot": 84.9, "reportedDifot": 94.7}, {"date": "2025-10-10", "total": 569, "onTimeOrig": 481, "onTimeCurr": 542, "rerated": 62, "trueDifot": 84.5, "reportedDifot": 95.3}, {"date": "2025-10-11", "total": 12, "onTimeOrig": 8, "onTimeCurr": 9, "rerated": 1, "trueDifot": 66.7, "reportedDifot": 75.0}, {"date": "2025-10-12", "total": 12, "onTimeOrig": 9, "onTimeCurr": 10, "rerated": 1, "trueDifot": 75.0, "reportedDifot": 83.3}, {"date": "2025-10-13", "total": 581, "onTimeOrig": 462, "onTimeCurr": 540, "rerated": 80, "trueDifot": 79.5, "reportedDifot": 92.9}, {"date": "2025-10-14", "total": 548, "onTimeOrig": 460, "onTimeCurr": 520, "rerated": 62, "trueDifot": 83.9, "reportedDifot": 94.9}, {"date": "2025-10-15", "total": 514, "onTimeOrig": 417, "onTimeCurr": 489, "rerated": 73, "trueDifot": 81.1, "reportedDifot": 95.1}, {"date": "2025-10-16", "total": 532, "onTimeOrig": 448, "onTimeCurr": 502, "rerated": 55, "trueDifot": 84.2, "reportedDifot": 94.4}, {"date": "2025-10-17", "total": 642, "onTimeOrig": 518, "onTimeCurr": 604, "rerated": 88, "trueDifot": 80.7, "reportedDifot": 94.1}, {"date": "2025-10-18", "total": 13, "onTimeOrig": 9, "onTimeCurr": 12, "rerated": 3, "trueDifot": 69.2, "reportedDifot": 92.3}, {"date": "2025-10-19", "total": 15, "onTimeOrig": 6, "onTimeCurr": 9, "rerated": 3, "trueDifot": 40.0, "reportedDifot": 60.0}, {"date": "2025-10-20", "total": 524, "onTimeOrig": 428, "onTimeCurr": 498, "rerated": 71, "trueDifot": 81.7, "reportedDifot": 95.0}, {"date": "2025-10-21", "total": 501, "onTimeOrig": 409, "onTimeCurr": 474, "rerated": 66, "trueDifot": 81.6, "reportedDifot": 94.6}, {"date": "2025-10-22", "total": 497, "onTimeOrig": 388, "onTimeCurr": 462, "rerated": 75, "trueDifot": 78.1, "reportedDifot": 93.0}, {"date": "2025-10-23", "total": 601, "onTimeOrig": 440, "onTimeCurr": 555, "rerated": 116, "trueDifot": 73.2, "reportedDifot": 92.3}, {"date": "2025-10-24", "total": 606, "onTimeOrig": 456, "onTimeCurr": 562, "rerated": 109, "trueDifot": 75.2, "reportedDifot": 92.7}, {"date": "2025-10-25", "total": 14, "onTimeOrig": 10, "onTimeCurr": 12, "rerated": 2, "trueDifot": 71.4, "reportedDifot": 85.7}, {"date": "2025-10-26", "total": 11, "onTimeOrig": 5, "onTimeCurr": 6, "rerated": 1, "trueDifot": 45.5, "reportedDifot": 54.5}, {"date": "2025-10-27", "total": 13, "onTimeOrig": 11, "onTimeCurr": 10, "rerated": 0, "trueDifot": 84.6, "reportedDifot": 76.9}, {"date": "2025-10-28", "total": 573, "onTimeOrig": 461, "onTimeCurr": 535, "rerated": 77, "trueDifot": 80.5, "reportedDifot": 93.4}, {"date": "2025-10-29", "total": 663, "onTimeOrig": 537, "onTimeCurr": 618, "rerated": 82, "trueDifot": 81.0, "reportedDifot": 93.2}, {"date": "2025-10-30", "total": 619, "onTimeOrig": 456, "onTimeCurr": 568, "rerated": 113, "trueDifot": 73.7, "reportedDifot": 91.8}, {"date": "2025-10-31", "total": 597, "onTimeOrig": 473, "onTimeCurr": 560, "rerated": 88, "trueDifot": 79.2, "reportedDifot": 93.8}, {"date": "2025-11-01", "total": 18, "onTimeOrig": 15, "onTimeCurr": 16, "rerated": 1, "trueDifot": 83.3, "reportedDifot": 88.9}, {"date": "2025-11-02", "total": 15, "onTimeOrig": 9, "onTimeCurr": 10, "rerated": 1, "trueDifot": 60.0, "reportedDifot": 66.7}, {"date": "2025-11-03", "total": 633, "onTimeOrig": 532, "onTimeCurr": 592, "rerated": 62, "trueDifot": 84.0, "reportedDifot": 93.5}, {"date": "2025-11-04", "total": 612, "onTimeOrig": 473, "onTimeCurr": 565, "rerated": 95, "trueDifot": 77.3, "reportedDifot": 92.3}, {"date": "2025-11-05", "total": 634, "onTimeOrig": 504, "onTimeCurr": 590, "rerated": 88, "trueDifot": 79.5, "reportedDifot": 93.1}, {"date": "2025-11-06", "total": 595, "onTimeOrig": 425, "onTimeCurr": 548, "rerated": 124, "trueDifot": 71.4, "reportedDifot": 92.1}, {"date": "2025-11-07", "total": 556, "onTimeOrig": 452, "onTimeCurr": 520, "rerated": 69, "trueDifot": 81.3, "reportedDifot": 93.5}];
+
+let selMonth = 'all';
+const months = [...new Set(DATA.map(d => d.date.slice(0,7)))];
+
+function $(id){return document.getElementById(id)}
+
+function init(){
+  // Month buttons
+  let btns = '<button class="mbtn on" onclick="pick('all')">All</button>';
+  months.forEach(m => {
+    const label = new Date(m+'-15').toLocaleString('en',{month:'short',year:'2-digit'});
+    btns += `<button class="mbtn" onclick="pick('${m}')">${label}</button>`;
+  });
+  $('monthBtns').innerHTML = btns;
+  
+  // View tabs
+  document.querySelectorAll('#viewTabs button').forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll('#viewTabs button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+      renderTable();
+    };
+  });
+  
+  render();
+}
+
+function pick(m){
+  selMonth = m;
+  document.querySelectorAll('.mbtn').forEach(b => b.classList.toggle('on', 
+    (m==='all' && b.textContent==='All') || b.onclick.toString().includes("'"+m+"'")));
+  // Simpler approach
+  document.querySelectorAll('.mbtn').forEach(b => b.classList.remove('on'));
+  event.target.classList.add('on');
+  render();
+}
+
+function filtered(){
+  if(selMonth==='all') return DATA;
+  return DATA.filter(d => d.date.startsWith(selMonth));
+}
+
+function render(){
+  const fd = filtered();
+  if(!fd.length) return;
+  
+  // KPIs
+  const totJ = fd.reduce((s,d)=>s+d.total,0);
+  const totOrig = fd.reduce((s,d)=>s+d.onTimeOrig,0);
+  const totCurr = fd.reduce((s,d)=>s+d.onTimeCurr,0);
+  const totRr = fd.reduce((s,d)=>s+d.rerated,0);
+  const truePct = (totOrig/totJ*100).toFixed(1);
+  const repPct = (totCurr/totJ*100).toFixed(1);
+  const gap = (repPct - truePct).toFixed(1);
+  
+  $('kpis').innerHTML = `
+    <div class="kpi"><div class="l">True DIFOT</div><div class="v red">${truePct}%</div><div class="d">Against original speed</div></div>
+    <div class="kpi"><div class="l">Reported DIFOT</div><div class="v blue">${repPct}%</div><div class="d">Against rerated speed</div></div>
+    <div class="kpi"><div class="l">Hidden Gap</div><div class="v amber">${gap}%</div><div class="d">Masked by rerate</div></div>
+    <div class="kpi"><div class="l">Jobs Rerated</div><div class="v">${totRr.toLocaleString()}</div><div class="d">${(totRr/totJ*100).toFixed(1)}% of ${totJ.toLocaleString()}</div></div>
+    <div class="kpi"><div class="l">Total Jobs</div><div class="v">${totJ.toLocaleString()}</div><div class="d">${fd.length} days</div></div>
+  `;
+  
+  drawChart(fd);
+  renderTable();
+}
+
+function drawChart(fd){
+  const canvas = $('mainChart');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 300 * dpr;
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = 300;
+  const pad = {t:20,r:20,b:40,l:50};
+  const cW = W-pad.l-pad.r, cH = H-pad.t-pad.b;
+  
+  ctx.clearRect(0,0,W,H);
+  
+  // Y axis: 50-100%
+  const yMin=50, yMax=100;
+  const yScale = v => pad.t + cH - (v-yMin)/(yMax-yMin)*cH;
+  
+  // Grid
+  ctx.strokeStyle='#e2e8f0'; ctx.lineWidth=1;
+  for(let y=50;y<=100;y+=10){
+    const py = yScale(y);
+    ctx.beginPath();ctx.moveTo(pad.l,py);ctx.lineTo(W-pad.r,py);ctx.stroke();
+    ctx.fillStyle='#94a3b8';ctx.font='10px -apple-system,sans-serif';ctx.textAlign='right';
+    ctx.fillText(y+'%',pad.l-6,py+3);
+  }
+  
+  const xStep = cW / (fd.length-1 || 1);
+  
+  // Gap fill
+  ctx.fillStyle='rgba(245,158,11,0.15)';
+  ctx.beginPath();
+  fd.forEach((d,i)=>{
+    const x=pad.l+i*xStep;
+    if(i===0) ctx.moveTo(x,yScale(Math.min(d.reportedDifot,yMax)));
+    else ctx.lineTo(x,yScale(Math.min(d.reportedDifot,yMax)));
+  });
+  for(let i=fd.length-1;i>=0;i--){
+    ctx.lineTo(pad.l+i*xStep, yScale(Math.max(fd[i].trueDifot,yMin)));
+  }
+  ctx.closePath();ctx.fill();
+  
+  // Reported line (blue)
+  ctx.strokeStyle='#3b82f6';ctx.lineWidth=1.5;
+  ctx.beginPath();
+  fd.forEach((d,i)=>{
+    const x=pad.l+i*xStep, y=yScale(Math.min(Math.max(d.reportedDifot,yMin),yMax));
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  
+  // True line (red)
+  ctx.strokeStyle='#ef4444';ctx.lineWidth=2;
+  ctx.beginPath();
+  fd.forEach((d,i)=>{
+    const x=pad.l+i*xStep, y=yScale(Math.min(Math.max(d.trueDifot,yMin),yMax));
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  
+  // X labels (month starts)
+  ctx.fillStyle='#64748b';ctx.font='10px -apple-system,sans-serif';ctx.textAlign='center';
+  let lastM='';
+  fd.forEach((d,i)=>{
+    const m=d.date.slice(0,7);
+    if(m!==lastM){
+      lastM=m;
+      const x=pad.l+i*xStep;
+      const label=new Date(d.date+'T00:00:00').toLocaleString('en',{month:'short'});
+      ctx.fillText(label,x,H-pad.b+16);
+      ctx.strokeStyle='#cbd5e1';ctx.lineWidth=0.5;
+      ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,H-pad.b);ctx.stroke();
+    }
+  });
+}
+
+function renderTable(){
+  const fd = filtered();
+  const mode = document.querySelector('#viewTabs button.on')?.dataset.v || 'day';
+  
+  if(mode==='day'){
+    $('thead').innerHTML='<tr><th>Date</th><th>Day</th><th>Jobs</th><th>True DIFOT</th><th>Reported</th><th>Gap</th><th>Rerated</th><th>Visual</th></tr>';
+    $('tbody').innerHTML = fd.map(d=>{
+      const dt=new Date(d.date+'T00:00:00');
+      const dn=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
+      const gap=(d.reportedDifot-d.trueDifot).toFixed(1);
+      const pc=d.trueDifot>=90?'hi':d.trueDifot>=80?'mid':'lo';
+      const wkend=dn==='Sat'||dn==='Sun'?'background:#f8fafc':'';
+      return `<tr style="${wkend}"><td><b>${d.date}</b></td><td>${dn}</td><td>${d.total}</td>
+        <td><span class="p ${pc}">${d.trueDifot}%</span></td>
+        <td>${d.reportedDifot}%</td>
+        <td><span class="gap-badge">${gap}%</span></td>
+        <td>${d.rerated}</td>
+        <td><div class="bar" style="width:${Math.max(60,d.total/800*120)}px">
+          <div class="g" style="width:${d.trueDifot}%"></div>
+          <div class="y" style="width:${d.reportedDifot-d.trueDifot}%"></div>
+          <div class="r" style="width:${100-d.reportedDifot}%"></div>
+        </div></td></tr>`;
+    }).join('');
+  } else {
+    // Weekly
+    const weeks={};
+    fd.forEach(d=>{
+      const dt=new Date(d.date+'T00:00:00');
+      const thu=new Date(dt);thu.setDate(dt.getDate()+3-(dt.getDay()+6)%7);
+      const yr=thu.getFullYear();
+      const wk=Math.ceil(((thu-new Date(yr,0,4))/86400000+new Date(yr,0,4).getDay()+1)/7);
+      const key=yr+'-W'+String(wk).padStart(2,'0');
+      if(!weeks[key])weeks[key]={week:key,total:0,onTimeOrig:0,onTimeCurr:0,rerated:0,days:0,start:d.date,end:d.date};
+      weeks[key].total+=d.total;weeks[key].onTimeOrig+=d.onTimeOrig;weeks[key].onTimeCurr+=d.onTimeCurr;
+      weeks[key].rerated+=d.rerated;weeks[key].days++;weeks[key].end=d.date;
+    });
+    const wArr=Object.values(weeks);
+    $('thead').innerHTML='<tr><th>Week</th><th>Period</th><th>Days</th><th>Jobs</th><th>True DIFOT</th><th>Reported</th><th>Gap</th><th>Rerated</th></tr>';
+    $('tbody').innerHTML=wArr.map(w=>{
+      const t=(w.onTimeOrig/w.total*100).toFixed(1);
+      const r=(w.onTimeCurr/w.total*100).toFixed(1);
+      const gap=(r-t).toFixed(1);
+      const pc=t>=90?'hi':t>=80?'mid':'lo';
+      return`<tr><td><b>${w.week}</b></td><td>${w.start} – ${w.end}</td><td>${w.days}</td><td>${w.total}</td>
+        <td><span class="p ${pc}">${t}%</span></td><td>${r}%</td><td><span class="gap-badge">${gap}%</span></td><td>${w.rerated}</td></tr>`;
+    }).join('');
+  }
+}
+
+window.addEventListener('resize',()=>{const fd=filtered();if(fd.length)drawChart(fd);});
+init();
+</script>
+</body>
+</html>
